@@ -1,0 +1,96 @@
+/* Query #1 */
+/* What is the most popular number of hashtags? */
+
+USE social_media;
+CREATE OR REPLACE VIEW most_Popular_Num_Hastags_View1 AS 
+	SELECT num_of_hashtags, COUNT(num_of_hashtags) AS frequency
+	FROM tweet_content C
+		JOIN tweet_info I
+		USING(tweet_id)
+	WHERE total_likes>1000
+	GROUP BY num_of_hashtags
+	ORDER BY num_of_hashtags DESC;
+
+/* Query 2 */
+/* What is the average tweet length of each non-verified vs verified person? */
+/* 2 Queries have been used for this question */
+
+CREATE OR REPLACE VIEW avg_tweet_length_verified_view2 AS
+	SELECT user_handle, FORMAT(AVG(tweet_length),0) AS 'Average Tweet Length'
+	FROM tweet_content
+		JOIN tweet_info 
+			USING(tweet_id)
+		JOIN user_info 
+			USING(user_id)
+	WHERE verified = 'Yes'
+	GROUP BY user_id;
+CREATE OR REPLACE VIEW avg_tweet_length_nonverified_view3 AS
+	SELECT user_handle, FORMAT(AVG(tweet_length),0) AS 'Average Tweet Length'
+	FROM tweet_content
+		JOIN tweet_info 
+			USING(tweet_id)
+		JOIN user_info 
+			USING(user_id)
+	WHERE verified = 'No'
+	GROUP BY user_id;
+
+/* Query 3 */
+/* What is the percentage of visual tweets present? */
+CREATE OR REPLACE VIEW pct_of_visual_tweets_view4 AS
+	SELECT FORMAT(
+	CONCAT(((SELECT COUNT(VISUAL_ID) 
+			FROM VISUALS
+			JOIN TWEET_VISUAL_LINK 
+				USING(VISUAL_ID)
+	JOIN TWEET_INFO
+	USING(TWEET_ID)) / 
+			COUNT(TWEET_ID))*100,'%'),2) AS 'Percentage of Visual Tweets'
+	FROM TWEET_INFO;
+
+
+/* Query 4 */
+/* What is the sum of likes for each user? */
+CREATE OR REPLACE VIEW sum_likes_eachUser_view5 AS
+	SELECT user_handle, SUM(total_likes) AS sum_of_likes
+	FROM tweet_info
+		JOIN user_info
+			USING(user_id)
+	GROUP BY user_id
+	ORDER BY sum_of_likes;
+
+
+/* Query 5 */
+/* What is the shortest tweet length among all awards? */
+CREATE OR REPLACE VIEW shortest_tweetLength_awards_view6 AS
+	SELECT MIN(tweet_length) AS 'Shortest Tweet Length with an Award'
+	FROM tweet_content
+	WHERE tweet_id IN (SELECT tweet_id
+					FROM tweet_award_link);
+
+
+
+/* View combines the user_info,tweet_info and tweet_content tables and shows all users' info 
+and their top tweet. (based on most likes) */
+
+CREATE OR REPLACE VIEW top_tweets_of_AllUsers_view7 AS 
+	SELECT user_id,user_handle,total_followers, total_following, verified,
+			tweet_text AS 'User Top Tweet Text', post_date AS 'Top Tweet Date', 
+            MAX(total_likes) AS 'Total Likes of Top Tweet', 
+            total_retweets AS 'Total retweets of top tweet'
+	FROM user_info ui
+		INNER JOIN tweet_info ti
+			USING(user_id)
+		INNER JOIN tweet_content tc
+			ON ti.tweet_id = tc.tweet_id
+	GROUP BY user_id;
+
+/* View 2 */
+/* Tells you broader information about a visual tweet (connects visual_name and tweet_text)*/
+CREATE OR REPLACE VIEW visual_text_view8 AS 
+	SELECT visual_id, visual_name, visual_size_kb, tweet_text
+	FROM visuals v
+		INNER JOIN tweet_visual_link tvl
+			USING(visual_id)
+		INNER JOIN tweet_content tc
+			ON tvl.tweet_id = tc.tweet_id
+	GROUP BY visual_id;
